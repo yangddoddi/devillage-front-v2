@@ -7,9 +7,13 @@ import axios from "axios";
 import { configureStore } from "@reduxjs/toolkit";
 import { CookiesProvider } from "react-cookie";
 import { Provider } from "react-redux";
-import { setRefreshToken, getRefreshToken } from "./store/Storage";
+import {
+  setRefreshToken,
+  getRefreshToken,
+  removeRefreshToken,
+} from "./store/Storage";
 import { parseJwt } from "./util/TokenParser";
-import tokenReducer from "./store/Auth";
+import tokenReducer, { removeToken } from "./store/Auth";
 import { SERVER } from "./util/Variables";
 import persistReducer from "redux-persist/es/persistReducer";
 import persistedReducer from "./store/Auth";
@@ -43,19 +47,28 @@ axios.interceptors.response.use(
     const refreshToken = getRefreshToken();
     const originalRequest = error.config;
 
-    if (error.response.status === 401 && !isTokenRefreshing) {
+    console.log(refreshToken);
+
+    if (error.response.status === 401 && !isTokenRefreshing && refreshToken) {
       const instance = axios.create();
-      delete instance.defaults.headers.common["Authorization"];
       instance.defaults.headers.post["Content-Type"] = "application/json";
-      instance.defaults.headers.post["RefreshToken"] = `Bearer ${refreshToken}`;
+      delete originalRequest.headers.Authorization;
+      delete instance.defaults.headers.common["Authorization"];
+      console.log("aa");
+
       isTokenRefreshing = true;
       return instance
         .post(`${SERVER}/auth/token/refresh`, {
+          transformRequest: (data, headers) => {
+            delete headers.common["Authorization"];
+            return data;
+          },
           headers: {
             RefreshToken: `Bearer ` + refreshToken,
           },
         })
         .then((res) => {
+          console.log("aa");
           if (res.status === 200) {
             const accessToken = res.data.accessToken;
             const refreshToken = res.data.refreshToken;
@@ -65,14 +78,18 @@ axios.interceptors.response.use(
               "Authorization"
             ] = `Bearer ${accessToken}`;
             setRefreshToken(refreshToken);
-
             // 새로 받은 토큰 저장 및 원래 요청 다시 보내기
             originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
             return axios(originalRequest);
           }
+        })
+        .catch((err) => {
+          console.log("aa");
+          localStorage.removeItem("accessToken");
+          removeRefreshToken();
+          window.location.href = "/login";
         });
     }
-    isTokenRefreshing = false;
     return Promise.reject(error);
   }
 );

@@ -28,8 +28,13 @@ export const MyPage = ({ myPage, setMyPage }) => {
     const instance = axios.create();
     instance.defaults.headers.common["Authorization"] = "";
     if (refreshToken) {
-      axios
+      instance
         .delete(`${SERVER}/auth/token`, {
+          transformRequest: (data, headers) => {
+            delete headers.get["Authorization"];
+            delete headers.post["Authorization"];
+            return data;
+          },
           headers: {
             RefreshToken: `Bearer ` + refreshToken,
           },

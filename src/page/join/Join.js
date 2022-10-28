@@ -155,7 +155,7 @@ export const Join = () => {
               <input
                 className={styles.inputBox}
                 type="password"
-                placeholder="패스워드를 입력하세요."
+                placeholder="패스워드(영어 + 숫자 + 특수문자 8자 이상 20자 이하)"
                 onChange={(e) => setPassword(e.target.value)}
               />
               <br />
